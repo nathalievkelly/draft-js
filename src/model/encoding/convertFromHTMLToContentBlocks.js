@@ -97,6 +97,15 @@ const anchorAttr = ['className', 'href', 'rel', 'target', 'title'];
 
 const imgAttr = ['alt', 'className', 'height', 'src', 'width'];
 
+const iframeAttr = [
+  'allow',
+  'allowfullscreen',
+  'frameborder',
+  'height',
+  'src',
+  'width',
+];
+
 let lastBlock;
 
 const EMPTY_CHUNK = {
@@ -464,6 +473,26 @@ const genFragment = (
     inEntity = DraftEntity.__create('IMAGE', 'MUTABLE', entityConfig || {});
   }
 
+  // IFRAME tags
+  if (
+    nodeName === 'iframe' &&
+    node instanceof HTMLIFrameElement &&
+    node.attributes.getNamedItem('src') &&
+    node.attributes.getNamedItem('src').value
+  ) {
+    var iframe = node;
+    var entityConfig = {};
+
+    iframeAttr.forEach(function(attr) {
+      var iframeAttribute = iframe.getAttribute(attr);
+      if (iframeAttribute) {
+        entityConfig[attr] = iframeAttribute;
+      }
+    });
+
+    node.textContent = '🎬';
+    inEntity = DraftEntity.__create('VIDEO', 'MUTABLE', entityConfig || {});
+  }
   // Inline tags
   inlineStyle = processInlineTag(nodeName, node, inlineStyle);
 
@@ -474,7 +503,6 @@ const genFragment = (
     }
     lastList = nodeName;
   }
-
   if (
     !experimentalTreeDataSupport &&
     nodeName === 'li' &&
@@ -482,7 +510,6 @@ const genFragment = (
   ) {
     depth = getListItemDepth(node, depth);
   }
-
   const blockType = getBlockTypeForTag(nodeName, lastList, blockRenderMap);
   const inListBlock = lastList && inBlock === 'li' && nodeName === 'li';
   const inBlockOrHasNestedBlocks =
@@ -496,19 +523,16 @@ const genFragment = (
     inBlock = nodeName;
     newBlock = !experimentalTreeDataSupport;
   }
-
   // this is required so that we can handle 'ul' and 'ol'
   if (inListBlock) {
     nextBlockType =
       lastList === 'ul' ? 'unordered-list-item' : 'ordered-list-item';
   }
-
   // Recurse through children
   let child: ?Node = node.firstChild;
   if (child != null) {
     nodeName = child.nodeName.toLowerCase();
   }
-
   let entityId: ?string = null;
 
   while (child) {
@@ -533,7 +557,6 @@ const genFragment = (
     } else {
       entityId = undefined;
     }
-
     const {
       chunk: generatedChunk,
       entityMap: maybeUpdatedEntityMap,
@@ -565,14 +588,12 @@ const genFragment = (
     }
     child = sibling;
   }
-
   if (newBlock) {
     chunk = joinChunks(
       chunk,
       getBlockDividerChunk(nextBlockType, depth, parentKey),
     );
   }
-
   return {chunk, entityMap: newEntityMap};
 };
 
@@ -629,7 +650,6 @@ const getChunkForHTML = (
       blocks: chunk.blocks,
     };
   }
-
   // Kill block delimiter at the end
   if (chunk.text.slice(-1) === '\r') {
     chunk.text = chunk.text.slice(0, -1);
@@ -637,7 +657,6 @@ const getChunkForHTML = (
     chunk.entities = chunk.entities.slice(0, -1);
     chunk.blocks.pop();
   }
-
   // If we saw no block tags, put an unstyled one in
   if (chunk.blocks.length === 0) {
     chunk.blocks.push({
@@ -646,14 +665,12 @@ const getChunkForHTML = (
       depth: 0,
     });
   }
-
   // Sometimes we start with text that isn't in a block, which is then
   // followed by blocks. Need to fix up the blocks to add in
   // an unstyled block for this content
   if (chunk.text.split('\r').length === chunk.blocks.length + 1) {
     chunk.blocks.unshift({type: 'unstyled', depth: 0});
   }
-
   return {chunk, entityMap: newEntityMap};
 };
 
@@ -661,7 +678,6 @@ const convertChunkToContentBlocks = (chunk: Chunk): ?Array<BlockNodeRecord> => {
   if (!chunk || !chunk.text || !Array.isArray(chunk.blocks)) {
     return null;
   }
-
   const initialState = {
     cacheRef: {},
     contentBlocks: [],
@@ -727,13 +743,11 @@ const convertChunkToContentBlocks = (chunk: Chunk): ?Array<BlockNodeRecord> => {
             .set('children', parentRecord.children.push(textNode.getKey()));
         });
       }
-
       acc.contentBlocks[parentIndex] = parentRecord.set(
         'children',
         parentRecord.children.push(key),
       );
     }
-
     const blockNode = new BlockNodeRecord({
       key,
       parent,
@@ -770,7 +784,6 @@ const convertFromHTMLToContentBlocks = (
   // Be ABSOLUTELY SURE that the dom builder you pass here won't execute
   // arbitrary code in whatever environment you're running this in. For an
   // example of how we try to do this in-browser, see getSafeBodyFromHTML.
-
   // TODO: replace DraftEntity with an OrderedMap here
   const chunkData = getChunkForHTML(
     html,
@@ -782,7 +795,6 @@ const convertFromHTMLToContentBlocks = (
   if (chunkData == null) {
     return null;
   }
-
   const {chunk, entityMap} = chunkData;
   const contentBlocks = convertChunkToContentBlocks(chunk);
 
