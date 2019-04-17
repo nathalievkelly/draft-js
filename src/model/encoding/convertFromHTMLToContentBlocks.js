@@ -476,7 +476,6 @@ const genFragment = (
   // IFRAME tags
   if (
     nodeName === 'iframe' &&
-    node instanceof HTMLIFrameElement &&
     node.attributes.getNamedItem('src') &&
     node.attributes.getNamedItem('src').value
   ) {
